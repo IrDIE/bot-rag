@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import HttpUrl
 from schemas.request import PredictionRequest, PredictionResponse
 from utils.logger import setup_logger
-
+from dotenv import load_dotenv
 from utils_my.utils import magic_prediction
 
 # Initialize
@@ -55,14 +55,7 @@ async def log_requests(request: Request, call_next):
 async def predict(body: PredictionRequest):
     try:
         await logger.info(f"Processing prediction request with id: {body.id}")
-        # Здесь будет вызов вашей модели
-        # answer =  magic_prediction(body.query)
-        id_answer, reasoning, links_raw_str  = magic_prediction(body.query)
-
-        # sources: List[HttpUrl] = [
-        #     HttpUrl("https://itmo.ru/ru/"),
-        #     HttpUrl("https://abit.itmo.ru/"),
-        # ]
+        id_answer, reasoning, links_raw_str  = await magic_prediction( body.query)
 
         response = PredictionResponse(
             id=body.id,

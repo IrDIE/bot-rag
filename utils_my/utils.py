@@ -7,9 +7,10 @@ from typing import List
 import pickle
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import FAISS
+from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 from langchain import hub
-
+from langchain_cohere import ChatCohere
 from langchain_community.document_loaders import WebBaseLoader
 from langchain import hub
 from langchain_core.documents import Document
@@ -35,8 +36,8 @@ def test_vpn():
     x = requests.post(url, json = myobj)
     print(x.text)
 
-def magic_prediction(user_query : str ) :
-    return run(user_query)
+async def magic_prediction( user_query : str ) :
+    return await run( user_query)
 
 def parce_recurcuve(urls : List[str], save = False):
     results = []
@@ -163,10 +164,7 @@ def process_answer_model_no_answers(answer : str, sources : list):
     return id_answer, reasoning, links
 
 
-def run(user_q):
-    have_variants = contains_answer_variants(user_q)
-    print(f"got \n{user_q}")
-
+async def run(user_q):
     load_dotenv() 
     langchain_tracing_v2 = os.getenv('LANGCHAIN_TRACING_V2')
     langchain_endpoint = os.getenv('LANGCHAIN_ENDPOINT')
@@ -174,16 +172,26 @@ def run(user_q):
 
     ## LLM
     openai_api_key = os.getenv('OPENAI_API_KEY')
+    # qroq = os.getenv('GROQ_API_KEY')
+    # cohere = os.getenv('COHERE_API_KEY')
+
 
     ## Pinecone Vector Database
     pinecone_api_key = os.getenv('PINECONE_API_KEY')
     pinecone_api_host = os.getenv('PINECONE_API_HOST')
     index_name = os.getenv('PINECONE_INDEX_NAME')
+    
+    
 
     os.environ['LANGCHAIN_TRACING_V2'] = langchain_tracing_v2
     os.environ['LANGCHAIN_ENDPOINT'] = langchain_endpoint
     os.environ['LANGCHAIN_API_KEY'] = langchain_api_key
+
     os.environ['OPENAI_API_KEY'] = openai_api_key
+    # os.environ['GROQ_API_KEY'] = qroq
+    # os.environ['COHERE_API_KEY'] = cohere
+
+    
 
     #Pinecone keys
     os.environ['PINECONE_API_KEY'] = pinecone_api_key
@@ -191,7 +199,6 @@ def run(user_q):
     os.environ['PINECONE_INDEX_NAME'] = index_name
 
     model_name = "multilingual-e5-large" 
-    
 
     embeddings = PineconeEmbeddings(
         model=model_name,
@@ -201,31 +208,38 @@ def run(user_q):
     docsearch = load_indexed_db(embeddings)
     # retriever = docsearch.as_retriever()
     prompt = hub.pull("rlm/rag-prompt")
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
+    
 
-    def retrieve(state: State):
-        retrieved_docs = docsearch.similarity_search(state["question"])
+    # llm = ChatGroq(model="llama3-8b-8192")
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7) # gpt-3.5-turbo gpt-4o-mini
+    # llm = ChatCohere(model="command-r-plus")
+
+    async def retrieve(state: State):
+        
+        retrieved_docs_ = await  docsearch.asimilarity_search_with_score(query=state["question"])
+        retrieved_docs = [r[0] for r in retrieved_docs_]
+
+        # retrieved_docs = await docsearch.asimilarity_search(state["question"])
         return {"context": retrieved_docs}
-    
-    def generate(state: State):
+
+    async def generate(state: State):
         docs_content = "\n\n".join(doc.page_content for doc in state["context"])
-        messages = prompt.invoke({"question": state["question"], "context": docs_content})
-        response = llm.invoke(messages)
+        messages = await prompt.ainvoke({"question": state["question"], "context": docs_content})
+        response = await llm.ainvoke(messages)
         return {"answer": response.content}
-    
+
 
     graph_builder = StateGraph(State).add_sequence([retrieve, generate])
     graph_builder.add_edge(START, "retrieve")
     graph = graph_builder.compile()
-
+    have_variants = contains_answer_variants(user_q)
     test_q = preprocess_user_q(user_q) if have_variants else preprocess_user_q_no_answers(user_q)
+    result = await graph.ainvoke({"question": test_q})
 
-    result = graph.invoke({"question": test_q})
     if not have_variants:
         id_answer, reasoning, links_raw_str = process_answer_model_no_answers(result["answer"], result['context'])
     else:
         id_answer, reasoning, links_raw_str = process_answer_model(result["answer"], result['context'])
-
     return id_answer, reasoning, links_raw_str 
 
 
