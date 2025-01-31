@@ -56,6 +56,7 @@ async def predict(body: PredictionRequest):
     try:
         await logger.info(f"Processing prediction request with id: {body.id}")
         id_answer, reasoning, links_raw_str  = await magic_prediction( body.query)
+        reasoning +="\n\nВсе ответы сгененированы gpt-4o-mini"
 
         response = PredictionResponse(
             id=body.id,
