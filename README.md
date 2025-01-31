@@ -2,7 +2,7 @@
 
 Этот репозиторий - описание конкурсного проекта МегаШколы ИТМО.
 
-![]()
+![](https://github.com/IrDIE/bot-rag/blob/main/media/ambition.gif)
 
 Идея:
 
