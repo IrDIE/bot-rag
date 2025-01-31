@@ -3,14 +3,12 @@ import json
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders.recursive_url_loader import RecursiveUrlLoader
 from typing import List
-
 import pickle
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.vectorstores import FAISS
-from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 from langchain import hub
-from langchain_cohere import ChatCohere
+
 from langchain_community.document_loaders import WebBaseLoader
 from langchain import hub
 from langchain_core.documents import Document
@@ -61,24 +59,6 @@ def parce_recurcuve(urls : List[str], save = False):
         results.extend(docs)
     return results
 
-    # # Define the file path to store the data
-    # output_file = "scraped__data.txt"
-
-    # # Open the file in write mode with UTF-8 encoding
-    # with open(output_file, "w", encoding="utf-8") as file:
-    #     # Write metadata and content for each document to the file
-    #     for doc in docs:
-    #         title = doc.metadata.get("title")
-    #         source = doc.metadata.get("source")
-    #         content = doc.page_content
-
-    #         # Ensure that the title, source, and content are string type
-    #         if isinstance(title, str) and isinstance(source, str) and isinstance(content, str):
-    #             file.write("Page Title: " + title + "\n")
-    #             file.write("Page URL: " + source + "\n")
-    #             file.write("Page Content:\n" + content + "\n\n")
-    #         else:
-    #             print("Skipped a document due to non-string content.")
 
 def parce_recurcuve_depth(urls : List[str], save = False, max_depth = 2):
     results = []
@@ -172,26 +152,16 @@ async def run(user_q):
 
     ## LLM
     openai_api_key = os.getenv('OPENAI_API_KEY')
-    # qroq = os.getenv('GROQ_API_KEY')
-    # cohere = os.getenv('COHERE_API_KEY')
-
 
     ## Pinecone Vector Database
     pinecone_api_key = os.getenv('PINECONE_API_KEY')
     pinecone_api_host = os.getenv('PINECONE_API_HOST')
     index_name = os.getenv('PINECONE_INDEX_NAME')
     
-    
-
     os.environ['LANGCHAIN_TRACING_V2'] = langchain_tracing_v2
     os.environ['LANGCHAIN_ENDPOINT'] = langchain_endpoint
     os.environ['LANGCHAIN_API_KEY'] = langchain_api_key
-
     os.environ['OPENAI_API_KEY'] = openai_api_key
-    # os.environ['GROQ_API_KEY'] = qroq
-    # os.environ['COHERE_API_KEY'] = cohere
-
-    
 
     #Pinecone keys
     os.environ['PINECONE_API_KEY'] = pinecone_api_key
